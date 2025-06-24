@@ -74,13 +74,14 @@ def download_file(url, filename):
         print(f"下载失败：{e}")
         return None
 
-def download_song(download_song):
-    filename = download_song['filename']
-    title = download_song['title']
-    artist = download_song['artist']
-    url = download_song['url']
-    pic = download_song['pic']
-    lrc = download_song['lrc']
+def download_song(song_info):
+    print("="*60)
+    filename = song_info['filename']
+    title = song_info['title']
+    artist = song_info['artist']
+    url = song_info['url']
+    pic = song_info['pic']
+    lrc = song_info['lrc']
     file_path = download_file(url, f"{filename}.mp3")
     if not file_path:
         print("下载歌曲失败")
@@ -124,6 +125,7 @@ def write_metadata(file_path, title, artist, lyrics, image_data):
     tags.save(file_path)
     print(f"元数据已写入：{file_path}")
     print(f"{artist}-{title} 歌曲下载并处理完成！")
+    print("="*60 + "\n")
 
 
 def main():
@@ -142,35 +144,42 @@ def main():
     results = results['data']
 
     show_results(results)
-    choices = input("请输入要下载的歌曲编号（可输入多个编号，用空格分隔，输入q退出）：")
+    choices = input("请输入要下载的歌曲编号（可输入多个编号，用空格分隔，输入q退出，输入all全部下载）：")
     if choices.lower() == 'q':
         print("退出程序")
         return
 
-    try:
-        choice_list = [int(c) for c in choices.strip().split() if c.isdigit()]
-        if not choice_list:
+    # 新增all支持
+    if choices.strip().lower() == 'all':
+        choice_list = list(range(1, len(results) + 1))
+    else:
+        try:
+            choice_list = [int(c) for c in choices.strip().split() if c.isdigit()]
+            if not choice_list:
+                print("请输入有效的数字编号")
+                return
+        except ValueError:
             print("请输入有效的数字编号")
             return
-        for choice in choice_list:
-            if 1 <= choice <= len(results):
-                selected_song = results[choice - 1]
-                resp = get_music_details(selected_song['rid'])
-                if resp.get('code') != 200:
-                    print(f"获取歌曲详情失败（编号{choice}），请稍后再试")
-                    continue
-                if not resp.get('data'):
-                    print(f"未找到歌曲详情（编号{choice}）")
-                    continue
-                selected_song = resp['data']
-                selected_song['filename'] = f"{selected_song['artist']} - {selected_song['name']}"
-                selected_song['title'] = selected_song['name']
-                selected_song['artist'] = selected_song['artist']
-                download_song(selected_song)
-            else:
-                print(f"无效的选项：{choice}")
-    except ValueError:
-        print("请输入有效的数字编号")
+
+    for choice in choice_list:
+        if 1 <= choice <= len(results):
+            selected_song = results[choice - 1]
+            resp = get_music_details(selected_song['rid'])
+            if resp.get('code') != 200:
+                print(f"获取歌曲详情失败（编号{choice}），请稍后再试")
+                continue
+            if not resp.get('data'):
+                print(f"未找到歌曲详情（编号{choice}）")
+                continue
+            # print(f"正在处理返回数据：{resp}")
+            song_info = resp['data']
+            song_info['filename'] = f"{selected_song['artist']} - {selected_song['name']}"
+            song_info['title'] = selected_song['name']
+            song_info['artist'] = selected_song['artist']
+            download_song(song_info)
+        else:
+            print(f"无效的选项：{choice}")
 
 if __name__ == "__main__":
     main()
